@@ -15,6 +15,14 @@ df2 = pd.read_excel(arquivo, sheet_name='Relatório de Vendas1')
 # Concocatenar as duas tabelas
 df_consolidado = pd.concat([df1,df2],ignore_index=True)
 
+#remove as duplicatas do dataframe
+df_consolidado = df_consolidado.drop_duplicates()
+
+# adiciona uma coluna de status com base no plano vendido
+df_consolidado['Status'] = df_consolidado['Plano Vendido'].apply(lambda x: 'Premium' if x == 'Enterprise' else 'Padrão')
+
+
+
 # rota da pagina inicial ex: http://127.0.0.1:5000/
 @app.route('/')
 def pagina_inicial():
@@ -34,18 +42,20 @@ def pagina_inicial():
             min-height: 20px;
             }
         </style>
-        <h1>API de Análise de Dados de Vendas</h1>
-        <h2>Use as rotas para obter análises:</h2>
-        <a href=''> -- Pagina Inicial -- </a><br/>
-        <a href='/clientes_por_cidade'> -- Clientes por Cidade -- </a><br/>
-        <a href='/vendas_por_plano'> -- Vendas por Plano -- </a><br/>
-        <a href='/top_cidades'> -- Top 3 Cidades -- </a><br/>
-        <a href='/download/excel'> -- Download Em Excel -- </a><br/>
-        <a href='/download/csv'> -- Download Em CSV -- </a><br/>
-        <a href=''> -- Grafico Em Pizza -- </a><br/>
-        <a href=''> -- Grafico De Barra -- </a><br/>
-        <br/>
-        <a href='mailto:endigustavo@gmail.com'> Email de contato </a>
+        <div style='background-color:#DC143C'>
+            <h1>API de Análise de Dados de Vendas</h1>
+            <h2>Use as rotas para obter análises:</h2>
+            <a href=''> -- Pagina Inicial -- </a><br/>
+            <a href='/clientes_por_cidade'> -- Clientes por Cidade -- </a><br/>
+            <a href='/vendas_por_plano'> -- Vendas por Plano -- </a><br/>
+            <a href='/top_cidades'> -- Top 3 Cidades -- </a><br/>
+            <a href='/download/excel'> -- Download Em Excel -- </a><br/>
+            <a href='/download/csv'> -- Download Em CSV -- </a><br/>
+            <a href='/grafico_pizza'> -- Grafico Em Pizza -- </a><br/>
+            <a href='/grafico_barras'> -- Grafico De Barra -- </a><br/>
+            <br/>
+            <a href='mailto:endigustavo@gmail.com'> Email de contato </a>
+        <div>
 
     '''
     return conteudo
@@ -88,22 +98,43 @@ def grafico_barras():
     vendas_por_plano = df_consolidado['Plano Vendido'].value_counts()
 
     #criar o grafico de barras
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots() #cria um objeto de figura para os eixos do grafico
     vendas_por_plano.plot(kind='bar', ax=ax , color=['#66b3ff','#99ff99'])
     ax.set_title('Grafico de vendas por plano')
     ax.set_xlabel('Plano')
     ax.set_ylabel('Numero de vendas')
 
     #salvar o grafico em um objeto de memoria
-    img = io.BytesIO()
-    plt.savefig(img, format='png')
-    img.seek(0)
+    img = io.BytesIO() # criar um bufer de memoria e armazena a imagem
+    plt.savefig(img, format='png') #salva a imagem em formato png dentro do buffer
+    img.seek(0) # Move o ponteiro para o início do buffer
 
+    # converte a imagem em uma string codificada em padrão correto base64
     img_base64 = base64.b64encode(img.getvalue()).decode('utf-8')
 
     #retornando a imagem como resposta
     return send_file(img, mimetype='image/png')
 
+@app.route('/grafico_pizza')
+def grafico_torta():
+    #conta a quantidade de cada status
+    status_dist = df_consolidado['Status'].value_counts()
+
+    #criar o grafico de torta (de escarola!)
+    fig, ax = plt.subplots()
+    ax.pie(status_dist, labels=status_dist.index, autopct='%1.1f%%', startangle=90, colors=['#702963','#F36C21'])
+    ax.axis('equal')
+
+    #salvar o grafico em um objeto de memoria
+    img = io.BytesIO() # criar um bufer de memoria e armazena a imagem
+    plt.savefig(img, format='png') #salva a imagem em formato png dentro do buffer
+    img.seek(0) # Move o ponteiro para o início do buffer
+
+    # converte a imagem em uma string codificada em padrão correto base64
+    img_base64 = base64.b64encode(img.getvalue()).decode('utf-8')
+
+    #retornando a imagem como resposta
+    return send_file(img, mimetype='image/png')
 
 
 # Rodar a aplicação Flask
