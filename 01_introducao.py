@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Carregar os dados da planilha do Excel
-caminho = 'C:/Users/noturno/Documents/Gustavo/01_base_vendas.xlsx'
+caminho = 'C:/Users/noturno/Documents/Aula1/01_base_vendas.xlsx'
 
 df1 = pd.read_excel(caminho, sheet_name='Relatório de Vendas')
 df2 = pd.read_excel(caminho, sheet_name='Relatório de Vendas1')
