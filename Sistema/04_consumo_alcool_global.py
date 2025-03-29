@@ -90,7 +90,7 @@ def grafico3():
     for regiao, paises in regioes.items():
         placeholders = ",".join([f"'{p}'" for p in paises])
         query = f"""
-            SELECT SUM(total_litres_of_pure_alcohol) as total FROM drinks WHERE country IN ({placeholders})
+            SELECT SUM (total_litres_of_pure_alcohol) as total FROM drinks WHERE country IN ({placeholders})
         """
         total = pd.read_sql_query(query, conn)[0] or 0
         dados.append({"Região": regiao, "Consumo Total":total})
@@ -98,6 +98,17 @@ def grafico3():
     df_regioes = pd.DataFrame(dados)
     fig = px.pie(df_regioes, names="Região", values="Consumo Total", title="Consumo total por região do mundo")
     return fig.to_html() + "<br/><a href='/'>Voltar ao Inicio</a>"
+
+@app.route("/grafico4")
+def grafico4():
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    df = pd.read_sql_query("SELECT beer_servings, spirit_servings, wine_servings FROM drinks", conn)
+    conn.close()
+    medias = df.mean().reset_index()
+    medias.columns = ["Tipo", "Média"]
+    fig = px.pie(medias, names="Tipo", values="Média", title="Proporção média entre tipos de bebidas")
+    return fig.to_html() + '<br><a href="/">Voltar ao início</a>'
+
 
 # inicia o servidor flask
 if __name__ == "__main__":
