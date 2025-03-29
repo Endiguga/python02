@@ -23,12 +23,21 @@ app = Flask(__name__)
 
 html_template = '''
     <h1>Dashboard - Consumo de Alcool</h1>
+    <h2> Parte 01 </h2>
         <ul>
             <li> <a href="/grafico1"> Top 10 paises com maior consumo de alcool </a> </li>
             <li> <a href="/grafico2"> Média de consumo por tipo de bebida </a> </li>
             <li> <a href="/grafico3"> Consumo total por região </a> </li>
             <li> <a href="/grafico4"> Comparativo entre os tipos de bebidas </a> </li>
             <li> <a href="/pais?home=Brazil"> Insight por país (ex: Brazil) </a> </li>
+        </ul>
+    <h2> Parte 02 </h2>
+        <ul>
+            <li><a href="/comparar"> Comparar </a></li>
+            <li><a href="/upload_avengers"> Upload do CSV </a></li>
+            <li><a href="/apagar_avengers"> Apagar Tabela Avengers </a></li>
+            <li><a href="/atribuir_paises_avengers"> Atribuir Paises </a></li>
+            <li><a href="/avengers_vs_drinks"> V.A.A (Vingadores Alcolicos Anonimos) </a></li>
         </ul>
     '''
 
@@ -55,6 +64,7 @@ def grafico1():
     )
     return fig.to_html()
 
+
 # media do consumo por tipo global
 @app.route('/grafico2')
 def grafico2():
@@ -65,6 +75,29 @@ def grafico2():
     fig = px.bar(df_melted, x="Bebidas", y="Média de Porções", title="Media de consumo global por tipo")
     #return fig.to_html()
     return df_melted.to_html()
+
+@app.route('/grafico3')
+def grafico3():
+    # Define grupos de paises por região (simulando)
+    regioes = {
+        "Europa": ["France", "Germany", "Italy", "Spain", "Portugal", "UK"],
+        "Asia": ["China", "Japan", "India", "Thailand"],
+        "Africa": ["Angola","Nigeria","Egypt","Algeria"],
+        "Americas": ["USA", "Brazil", "Canada", "Argentina", "Mexico"]
+    }
+    dados = []
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    for regiao, paises in regioes.items():
+        placeholders = ",".join([f"'{p}'" for p in paises])
+        query = f"""
+            SELECT SUM(total_litres_of_pure_alcohol) as total FROM drinks WHERE country IN ({placeholders})
+        """
+        total = pd.read_sql_query(query, conn)[0] or 0
+        dados.append({"Região": regiao, "Consumo Total":total})
+    conn.close()
+    df_regioes = pd.DataFrame(dados)
+    fig = px.pie(df_regioes, names="Região", values="Consumo Total", title="Consumo total por região do mundo")
+    return fig.to_html() + "<br/><a href='/'>Voltar ao Inicio</a>"
 
 # inicia o servidor flask
 if __name__ == "__main__":
