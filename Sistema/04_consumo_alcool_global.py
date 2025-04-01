@@ -147,6 +147,26 @@ def comparar():
         </form>
     ''', opcoes=opcoes)
 
+@app.route("/upload_avengers", methods=['GET','POST'])
+def upload_avegers():
+    if request.method == "POST":
+        file = request.files["file"]
+        if not file:
+            return "<h3>Nenhum arquivo enviado</h3><br><a href='/upload_avenger'>Voltar ao Inicio</a>"
+        df_avengers = pd.read_csv(file, encoding="latin1")
+        conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+        df_avengers.to_sql("avengers", conn, if_exists="replace", index=False)
+        conn.commit()
+        conn.close()
+        return "<h3>Arquivo inserido com sucesso!</h3><a href='/'>Voltar</a>"
+    return '''
+        <h2>Upload do arquivo Avengers</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv">
+            <input type="submit" value=" - Enviar - ">
+        </form>
+    '''
+        
 # inicia o servidor flask
 if __name__ == "__main__":
     app.run(debug=True)
