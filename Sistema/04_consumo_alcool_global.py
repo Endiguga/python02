@@ -109,6 +109,43 @@ def grafico4():
     fig = px.pie(medias, names="Tipo", values="Média", title="Proporção média entre tipos de bebidas")
     return fig.to_html() + '<br><a href="/">Voltar ao início</a>'
 
+@app.route("/comparar", methods=['GET','POST'])
+def comparar():
+    opcoes = ["beer_servings", "spirit_servings", "wine_servings", "total_litres_of_pure_alcohol"]
+
+    if request.method == "POST":
+        eixo_x = request.form.get('eixo_x')
+        eixo_y = request.form.get('eixo_y')
+
+        if eixo_x == eixo_y:
+            return "<h3>Selecione variáveis diferentes.</h3>"
+        
+        conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+
+        df = pd.read_sql_query("SELECT country, {}, {} FROM drinks".format(eixo_x,eixo_y), conn)
+        conn.close()
+
+        fig = px.scatter(df, x=eixo_x, y=eixo_y, title=f"Comparação entre {eixo_x} e {eixo_y}")
+        fig.update_traces(textposition="top center")
+        return fig.to_html() + '<br><a href="/">Voltar ao início</a>'
+    return render_template_string('''
+        <h2>Comparar Campos<h2>
+        <form method="POST">
+            <label for="eixo_x"> Eixo X: </label>
+            <select name="eixo_x">
+                {% for col in opcoes %}
+                    <option value="{{ col }}"> {{ col }} </option>
+                {% endfor %}
+            </select><br><br>
+            <label for="eixo_y"> Eixo Y: </label>
+            <select name="eixo_y">
+                {% for col in opcoes %}
+                    <option value="{{ col }}"> {{ col }} </option>
+                {% endfor %}
+            </select><br><br>
+            <input type="submit" value=" - Comparar - ">
+        </form>
+    ''', opcoes=opcoes)
 
 # inicia o servidor flask
 if __name__ == "__main__":
