@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 import plotly.express as px
 import plotly.io as pio
+import random
 
 #configura o plotly para abrir os arquivos no navegador por padrão
 pio.renderers.default = "browser"
@@ -34,9 +35,11 @@ html_template = '''
     <h2> Parte 02 </h2>
         <ul>
             <li><a href="/comparar"> Comparar </a></li>
-            <li><a href="/upload_avengers"> Upload do CSV </a></li>
+            <li><a href="/upload_avengers"> Upload avengers </a></li>
             <li><a href="/apagar_avengers"> Apagar Tabela Avengers </a></li>
             <li><a href="/atribuir_paises_avengers"> Atribuir Paises </a></li>
+            <li><a href="/consultar_vingadores"> Consultar Vingadores por país </a></li>
+            <li><a href="/consultar_avenger"> Consultar detalhes do Vingador</a></li>
             <li><a href="/avengers_vs_drinks"> V.A.A (Vingadores Alcolicos Anonimos) </a></li>
         </ul>
     '''
@@ -162,11 +165,74 @@ def upload_avegers():
     return '''
         <h2>Upload do arquivo Avengers</h2>
         <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" accept=".csv">
+            <input type="file" name="file" accept=".csv"><br>
             <input type="submit" value=" - Enviar - ">
         </form>
     '''
-        
+
+@app.route("/apagar_avengers")
+def apagar_avengers():
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DROP TABLE IF EXISTS avengers")
+        conn.commit()
+        mensagem = "<h3>Tabela 'avengers' apagada com sucesso! </h3>"
+
+    except Exception as errinho:
+        mensagem = f"<h3>Erro ao apagar a tabela: {str(errinho)}</h3>"
+    
+    conn.close()
+    return mensagem + '<br><hr><br><a href="/">Voltar ao inicio</a>'
+
+@app.route('/atribuir_paises_avengers')
+def atribuir_paises_avengers():
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
+    df_drinks = pd.read_sql_query("SELECT country FROM drinks", conn)
+
+    random.seed(42)
+    paises_possiveis = df_drinks["country"].unique()
+    df_avengers["country"] = [random.choice(paises_possiveis) for _ in range(len(df_avengers))]
+    
+    df_avengers.to_sql("avengers", conn, if_exists="replace", index=False)
+    conn.commit()
+    conn.close()
+
+    return "<h3>Paises atribuidos aos Vingadores com sucesso!<h3><br><hr><br><a href='/'>Voltar ao inicio</a>"
+    
+@app.route("/consultar_vingadores")
+def consultar_vingadores():
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+
+    try:
+        df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
+
+    except Exception as errou:
+        conn.close()
+        mensagem1 = f"<h3>Informações dos heróis não encontrada: {str(errou)}</h3><br><hr><br><a href='/'>Voltar ao inicio</a>"
+    conn.close()
+
+    if df_avengers.empty:
+        return "<h3>A tabela 'avengers' está vazia</h3><br><hr><br><a href='/'>Voltar ao inicio</a>"
+    
+    return df_avengers.to_html(index=False) + "<br><hr><br><a href='/'>Voltar ao inicio</a>"
+
+
+    ### CRIAR UMA ROTA CHAMADA CONSULTAR VINGADORES, NELA QUERO MOSTRAR A TABELA VINGADORES, MAS CASO ELA NAO EXISTA MOSTRE UMA MENSAGEM DIZENDO QUE ELA NÃO EXISTE;
+    # ESSA ROTA NAO EXISTE UM LINK EM NOSSO MENU INICIAL E DEVE SER CRIADO
+
+# isso aqui comentado em baixo fica la nos menus no começo do codigo
+# <li><a href="/ver_avengers"> Ver tabela Avengers </a></li>
+
+@app.route("/consultar_avenger")
+def consultar_avenger():
+    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
+    conn.close()
+    #vamos continuar daqui!!!!!
+
 # inicia o servidor flask
 if __name__ == "__main__":
     app.run(debug=True)
