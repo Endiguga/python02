@@ -4,16 +4,18 @@ import sqlite3
 import plotly.express as px
 import plotly.io as pio
 import random
+# Meus modulos serao carregados aqui:
+import config
 
 #configura o plotly para abrir os arquivos no navegador por padrão
 pio.renderers.default = "browser"
 
 #carregar o drinks.csv
-df = pd.read_csv("C:/Users/noturno/Documents/Aula1/Sistema/drinks.csv")
+df = pd.read_csv(config.caminho_drinks_csv)
 #df_avengers = pd.read_csv("avengers.csv")
 
 #cria o banco de dados em sql e popular com os dados do arquivo csv
-conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+conn = sqlite3.connect(config.caminho_banco)
 df.to_sql("drinks", conn, if_exists="replace", index=False)
 #df_avengers.to_sql("Vingadores", conn, if_exists= "replace", index=False)
 conn.commit()
@@ -49,29 +51,12 @@ html_template = '''
 def index():
     return render_template_string(html_template)
 
-@app.route('/grafico1')
-def grafico1():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
-    df = pd.read_sql_query("""
-    SELECT country, total_litres_of_pure_alcohol
-    FROM drinks
-    ORDER BY total_litres_of_pure_alcohol DESC
-    LIMIT 10
-    """, conn)
-    conn.close()
-    fig = px.bar(
-        df,
-        x="country",
-        y="total_litres_of_pure_alcohol",
-        title="Top 10 paises com maior consumo de Alcool"
-    )
-    return fig.to_html()
 
 
 # media do consumo por tipo global
 @app.route('/grafico2')
 def grafico2():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     df = pd.read_sql_query("SELECT AVG(beer_servings) AS cerveja, AVG(spirit_servings) AS destilados, AVG(wine_servings) AS vinhos FROM drinks", conn)
     conn.close()
     df_melted = df.melt(var_name="Bebidas", value_name="Média de Porções")
@@ -89,7 +74,7 @@ def grafico3():
         "Americas": ["USA", "Brazil", "Canada", "Argentina", "Mexico"]
     }
     dados = []
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     for regiao, paises in regioes.items():
         placeholders = ",".join([f"'{p}'" for p in paises])
         query = f"""
@@ -104,7 +89,7 @@ def grafico3():
 
 @app.route("/grafico4")
 def grafico4():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     df = pd.read_sql_query("SELECT beer_servings, spirit_servings, wine_servings FROM drinks", conn)
     conn.close()
     medias = df.mean().reset_index()
@@ -123,7 +108,7 @@ def comparar():
         if eixo_x == eixo_y:
             return "<h3>Selecione variáveis diferentes.</h3>"
         
-        conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+        conn = sqlite3.connect(config.caminho_banco)
 
         df = pd.read_sql_query("SELECT country, {}, {} FROM drinks".format(eixo_x,eixo_y), conn)
         conn.close()
@@ -157,7 +142,7 @@ def upload_avegers():
         if not file:
             return "<h3>Nenhum arquivo enviado</h3><br><a href='/upload_avenger'>Voltar ao Inicio</a>"
         df_avengers = pd.read_csv(file, encoding="latin1")
-        conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+        conn = sqlite3.connect(config.caminho_banco)
         df_avengers.to_sql("avengers", conn, if_exists="replace", index=False)
         conn.commit()
         conn.close()
@@ -172,7 +157,7 @@ def upload_avegers():
 
 @app.route("/apagar_avengers")
 def apagar_avengers():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     cursor = conn.cursor()
 
     try:
@@ -188,11 +173,12 @@ def apagar_avengers():
 
 @app.route('/atribuir_paises_avengers')
 def atribuir_paises_avengers():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
     df_drinks = pd.read_sql_query("SELECT country FROM drinks", conn)
 
     random.seed(42)
+    #random.seed(config.semente_aleatoria)
     paises_possiveis = df_drinks["country"].unique()
     df_avengers["country"] = [random.choice(paises_possiveis) for _ in range(len(df_avengers))]
     
@@ -204,7 +190,7 @@ def atribuir_paises_avengers():
     
 @app.route("/consultar_vingadores")
 def consultar_vingadores():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
 
     try:
         df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
@@ -226,13 +212,47 @@ def consultar_vingadores():
 # isso aqui comentado em baixo fica la nos menus no começo do codigo
 # <li><a href="/ver_avengers"> Ver tabela Avengers </a></li>
 
-@app.route("/consultar_avenger")
+@app.route("/consultar_avenger", methods=["GET","POST"])
 def consultar_avenger():
-    conn = sqlite3.connect("C:/Users/noturno/Documents/Aula1/Sistema/consumo_alcool.db")
+    conn = sqlite3.connect(config.caminho_banco)
     df_avengers = pd.read_sql_query("SELECT * FROM avengers", conn)
     conn.close()
-    #vamos continuar daqui!!!!!
+    
+    # detecta automaticamente o nome da coluna
+    col_nome = [col for col in df_avengers.columns if "name" in col.lower()][0]
+
+    # Remove valores nulos antes do select
+    nomes = sorted([n for n in df_avengers[col_nome].unique() if pd.notnull(n)])
+
+    # Este bloco é executado somente ao carregar a pagina recebendo o post dela mesma anteriormente, resultando na busca do vingador na tabela, mostrando a mensagem de não localizado
+    if request.method == "POST":
+        nome = request.form.get("nome")
+        dados = df_avengers[df_avengers[col_nome] == nome]
+
+        if dados.empty:
+            return f"<h3>Vingador: '{nome}' não encontrado</h3><br><a href='consultar_avenger'>Tentar novamente</a>"
+        
+        return dados.to_html(index=False) + "<br><a href='/consultar_avenger'>Consultar outro</a> | <br><a href = '/'>Voltar ao início</a>"
+    
+    return render_template_string('''
+        <h2> Consultar dados de um Vingador </h2>
+        <form method="POST">
+            <label for="">Selecione o Vingador:</label>
+            <select name = "nome">
+                {% for n in nomes %}
+                    <option value="{{n}}">{{n}}</option>
+                {% endfor %}
+            </select><br></br>
+            <input type="submit" value="Consultar">
+        </form>
+        <br><hr><br><a href='/'>Voltar ao inicio</a>
+    ''', nomes=nomes)
+#@app.route("/consultar_avenger", methods=["GET","POST"])
 
 # inicia o servidor flask
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        debug=config.server_config["DEBUG"],
+        port=config.server_config["PORT"],
+        host=config.server_config["HOST"]
+    )
