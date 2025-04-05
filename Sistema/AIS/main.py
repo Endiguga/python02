@@ -191,7 +191,7 @@ def correlacao():
     fig = go.Figure()
 
     # Etapa A
-    fig.add_trace(go.scatter(
+    fig.add_trace(go.Scatter(
         x = x,
         y = y,
         mode = 'markers',
@@ -206,7 +206,7 @@ def correlacao():
     ))
 
     # Etapa B
-    fig.add_trace(go.scatter(
+    fig.add_trace(go.Scatter(
         x = x,
         y = m * y + b,
         mode = 'lines',
@@ -248,8 +248,8 @@ def correlacao():
             orientation='h',
             yanchor = 'bottom',
             y=1.05,
-            yanchor = 'center',
-            y=0.5,
+            xanchor = 'center',
+            x=0.5,
             bgcolor = 'rgba(0,0,0,0)',
             borderwidth = 0
         ),
